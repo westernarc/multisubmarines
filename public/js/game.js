@@ -16,7 +16,7 @@ var torpedoCooldown = 0.3,
 
 var pingCooldown = 1;
 var pingTimer = 0;
-var pingMaxDistance = 500;
+var pingMaxDistance = 600;
 var pingSpeed = 2;
 var pings = []; //Pings sent from player
 var counterpings = []; //Pings reflected to player
@@ -234,6 +234,12 @@ function update() {
 			pings.splice(i, 1);
 		}
 	}
+	for(i = 0; i < counterpings.length; i += 1) {
+		counterpings[i].radius += pingSpeed;
+		if(counterpings[i].radius > pingMaxDistance) {
+			counterpings.splice(i, 1);
+		}
+	}
 	/*
 	var i;
 	for(i = 0; i < localTorpedos.length; i += 1) {
@@ -264,7 +270,7 @@ function draw() {
 	var i;
 	for (i = 0; i < remotePlayers.length; i++) {
 		//Calculate distance between players
-		var alpha = distToAlpha(remotePlayers[i].getX() - localPlayer.getX(), remotePlayers[i].getY() - localPlayer.getY());
+		var alpha = distToAlpha(remotePlayers[i].getX() - localPlayer.getX(), remotePlayers[i].getY() - localPlayer.getY(), 10);
 
 		//Modify the alpha value depending on pings
 		var j;
@@ -273,9 +279,20 @@ function draw() {
 			//Modify the alpha depending on the difference
 			//Between (the distance of the remoteplayer and the ping base coordinates)
 			//and (the pings radius)
-			if(Math.abs(getDistance(remotePlayers[i].getX() - pings[j].x, remotePlayers[i].getY() - pings[j].y) - pings[j].radius) < 20) {
+			if(Math.abs(getDistance(remotePlayers[i].getX() - pings[j].x, remotePlayers[i].getY() - pings[j].y) - pings[j].radius) < 10) {
 				alpha += 0.1;
-				pings.push({x: remotePlayers[i].getX(), y: remotePlayers[i].getY(), radius: 0});
+				//Go through counterpings; if none have a matching id, send a counterping
+				//This is to make subs reflect pings only once
+				var existingRemote = false;
+				var k;
+				for(k = 0; k < counterpings.length; k += 1) {
+					if(counterpings[k].id == remotePlayers[i].id) {
+						existingRemote = true;
+					}
+				}
+				if(!existingRemote) {
+					counterpings.push({x: remotePlayers[i].getX(), y: remotePlayers[i].getY(), radius: 0, id: remotePlayers[i].id});
+				}
 			}
 		}
 		if(alpha > 1) alpha = 1;
@@ -319,15 +336,23 @@ function draw() {
 	//Draw pings
 	var i;
 	for(i = 0; i < pings.length; i += 1) {
-		ctx.strokeStyle = "rgba(0,0,0," + distToAlpha(pings[i].radius, pings[i].radius) + ")";
+		ctx.strokeStyle = "rgba(0,0,0," + distToAlpha(pings[i].radius, pings[i].radius, 70) + ")";
 		ctx.beginPath();
 		ctx.arc(pings[i].x,pings[i].y,pings[i].radius,0,2*Math.PI,false);
 		ctx.lineWidth = 1;
 		ctx.closePath();
 		ctx.stroke();
 	}
+	//Draw counterpings
+	for(i = 0; i < counterpings.length; i += 1) {
+		ctx.strokeStyle = "rgba(0,0,0," + distToAlpha(counterpings[i].radius - getDistance(counterpings[i].x - localPlayer.getX(), counterpings[i].y - localPlayer.getY()), counterpings[i].radius, 40) + ")";
+		ctx.beginPath();
+		ctx.arc(counterpings[i].x,counterpings[i].y,counterpings[i].radius,0,2*Math.PI,false);
+		ctx.lineWidth = 1;
+		ctx.closePath();
+		ctx.stroke();
+	}
 
-		
 	ctx.strokeStyle = "rgba(0,0,0,1)";
 	drawServerData(ctx);
 };
@@ -377,12 +402,11 @@ function toDegrees(angle) {
 }
 
 //Return an alpha value for a given distance
-function distToAlpha(dx, dy) {
+function distToAlpha(dx, dy, maxDist) {
 	var distance = getDistance(dx, dy);
 	if(distance < 0) distance = -distance;
 	var maxAlpha = 1;
-	var minAlpha = 0.05;
-	var maxDist = 40;
+	var minAlpha = 0;
 	
 	var alpha = maxDist / distance;
 	if(alpha > maxAlpha) alpha = maxAlpha;
