@@ -31,8 +31,8 @@ function init() {
 		startY = Math.round(Math.random()*(canvas.height-5));
 
 	// Initialise the local player
-	localPlayer = new Player(startX, startY);
-
+	localPlayer = new Player(startX, startY, 0);
+	
 	// Initialise socket connection
 	socket = io.connect("http://localhost", {port: 8000, transports: ["websocket"]});
 
@@ -97,7 +97,7 @@ function onSocketConnected() {
 	console.log("Connected to socket server");
 
 	// Send local player data to the game server
-	socket.emit("new player", {x: localPlayer.getX(), y: localPlayer.getY()});
+	socket.emit("new player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
 };
 
 // Socket disconnected
@@ -110,7 +110,7 @@ function onNewPlayer(data) {
 	console.log("New player connected: "+data.id);
 
 	// Initialise the new player
-	var newPlayer = new Player(data.x, data.y);
+	var newPlayer = new Player(data.x, data.y, data.angle);
 	newPlayer.id = data.id;
 
 	// Add new player to the remote players array
@@ -164,10 +164,11 @@ function animate() {
 **************************************************/
 function update() {
 	// Update local player and check for change
-	if (localPlayer.update(keys)) {
+	localPlayer.update(keys);
+	//if (localPlayer.update(keys)) {
 		// Send local player data to the game server
-		socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY()});
-	};
+		socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
+	//};
 };
 
 
@@ -177,17 +178,32 @@ function update() {
 function draw() {
 	// Wipe the canvas clean
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+	
 	// Draw the local player
+	ctx.strokeStyle = "rgba(0,0,0,1)";
 	localPlayer.draw(ctx);
-
+	//drawPlayer(localPlayer);
 	// Draw the remote players
 	var i;
 	for (i = 0; i < remotePlayers.length; i++) {
+		//Calculate distance between players
+		var distance = getDistance(remotePlayers[i].getX() - localPlayer.getX(), remotePlayers[i].getY() - localPlayer.getY());
+		if(distance < 0) distance = -distance;
+		var maxAlpha = 1;
+		var minAlpha = 0.05;
+		var maxDist = 40;
+		
+		var alpha = maxDist / distance;
+		if(alpha > maxAlpha) alpha = maxAlpha;
+		if(alpha < minAlpha) alpha = minAlpha;
+		//Set color of draw depending on distance from player.
+		//Other playes fade out as they grow farther
+		ctx.strokeStyle = "rgba(0,0,0,"+ alpha.toString() +")";
+		
+		//Draw other player
 		remotePlayers[i].draw(ctx);
 	};
 };
-
 
 /**************************************************
 ** GAME HELPER FUNCTIONS
@@ -199,6 +215,29 @@ function playerById(id) {
 		if (remotePlayers[i].id == id)
 			return remotePlayers[i];
 	};
-	
 	return false;
 };
+
+//Find approximate distance
+//http://www.flipcode.com/archives/Fast_Approximate_Distance_Functions.shtml
+function getDistance(dx, dy) {
+	var min, max, dist;
+	
+	//Absolute values
+	if(dx < 0) dx = -dx;
+	if(dy < 0) dy = -dy;
+	
+	//Find min and max
+	if(dx < dy) {
+		min = dx;
+		max = dy;
+	} else {
+		min = dy;
+		max = dx;
+	}
+	
+	dist = (max * 1007) + (min * 441);
+	if(max < (min << 4)) dist -= (max * 40);
+	
+	return ((dist + 512) >> 10);
+}

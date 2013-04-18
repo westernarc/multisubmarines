@@ -1,16 +1,19 @@
 /**************************************************
 ** GAME PLAYER CLASS
 **************************************************/
-var Player = function(startX, startY) {
+var Player = function(startX, startY, startAngle) {
 	var x = startX,
 		y = startY,
 		id,
-		moveAmount = 2;
-	
+		moveAmount = 0.1;
+
 	var radius = 25;	//Radius of contact for submarine
 	var armor = 3;		//Armor represents hull integrity
-	var angle = 0;		//Angle of submarine
-	var subSize = 15;
+	var angle = startAngle;	//Angle of submarine
+	var subSize = 15;	//Size of the submarine.  Defines radius withing a rectangle
+						//will be circumscribed
+	var speed = 0;
+	var maxSpeed = 2;
 	
 	// Getters and setters
 	var getX = function() {
@@ -29,35 +32,53 @@ var Player = function(startX, startY) {
 		y = newY;
 	};
 
+	var getAngle = function() {
+		return angle;
+	};
+	
+	var setAngle = function(newA) {
+		angle = newA;
+	};
+	
 	// Update player position
 	var update = function(keys) {
 		// Previous position
 		var prevX = x,
-			prevY = y;
+			prevY = y,
+			prevAngle = angle;
 
 		// Up key takes priority over down
 		if (keys.up) {
-			y -= moveAmount;
+			speed += moveAmount;
 		} else if (keys.down) {
-			y += moveAmount;
+			speed -= moveAmount;
 		};
 
 		// Left key takes priority over right
 		if (keys.left) {
 			angle -= 0.1;
-			x -= moveAmount;
+			//x -= moveAmount;
 		} else if (keys.right) {
 			angle += 0.1;
-			x += moveAmount;
+			//x += moveAmount;
 		};
-
-		return (prevX != x || prevY != y) ? true : false;
+		
+		if(speed > maxSpeed) {
+			speed = maxSpeed;
+		} else if(speed < 0) {
+			speed = 0;
+		}
+		//Move the submarine according to angle and speed
+		if(speed != 0) {
+			x += Math.cos(angle) * speed;
+			y += Math.sin(angle) * speed;
+		}		
+		
+		return (prevX != x || prevY != y || prevAngle != angle) ? true : false;
 	};
 
 	// Draw player
 	var draw = function(ctx) {
-		//ctx.fillRect(x-5, y-5, 10, 10);
-		
 		//Draw armor arc
 		ctx.beginPath();
 		ctx.arc(x,y,radius,0,2*Math.PI,false);	
@@ -67,11 +88,20 @@ var Player = function(startX, startY) {
 		
 		//Draw sub
 		ctx.beginPath();
-		ctx.moveTo(x + Math.cos(angle + 0.2) * subSize, y + Math.sin(angle + 0.2) * subSize);
-		ctx.lineTo(x + Math.cos(angle - 0.2) * subSize, y + Math.sin(angle - 0.2) * subSize);
-		ctx.lineTo(x + Math.cos(angle + Math.PI + 0.2) * subSize, y + Math.sin(angle + Math.PI + 0.2) * subSize);
-		ctx.lineTo(x + Math.cos(angle + Math.PI - 0.2) * subSize, y + Math.sin(angle + Math.PI - 0.2) * subSize);
+		ctx.moveTo(x + Math.cos(angle + 0.1) * subSize, y + Math.sin(angle + 0.1) * subSize);
+		ctx.lineTo(x + Math.cos(angle - 0.1) * subSize, y + Math.sin(angle - 0.1) * subSize);
+		ctx.lineTo(x + Math.cos(angle - Math.PI/2) * subSize / 3, y + Math.sin(angle - Math.PI/2) * subSize/3);
+		ctx.lineTo(x + Math.cos(angle + Math.PI + 0.1) * subSize, y + Math.sin(angle + Math.PI + 0.1) * subSize);
+		ctx.lineTo(x + Math.cos(angle + Math.PI - 0.1) * subSize, y + Math.sin(angle + Math.PI - 0.1) * subSize);
+		ctx.lineTo(x + Math.cos(angle + Math.PI/2) * subSize / 3, y + Math.sin(angle + Math.PI/2) * subSize/3);
 		ctx.lineWidth = 1;
+		ctx.closePath();
+		ctx.stroke();
+		
+		//Draw direction
+		ctx.beginPath();
+		ctx.moveTo(x,y);
+		ctx.lineTo(x + Math.cos(angle) * 45, y + Math.sin(angle) * 45);
 		ctx.closePath();
 		ctx.stroke();
 	};
@@ -82,6 +112,8 @@ var Player = function(startX, startY) {
 		getY: getY,
 		setX: setX,
 		setY: setY,
+		getAngle: getAngle,
+		setAngle: setAngle,
 		update: update,
 		draw: draw
 	}
