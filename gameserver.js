@@ -4,14 +4,14 @@
 var util = require("util"),					// Utility resources (logging, object inspection, etc)
 	io = require("socket.io"),				// Socket.IO
 	Player = require("./Player").Player;	// Player class
-	//Torpedo = require("./Torpedo").Torpedo;	// Torpedo class
+var Torpedo = require("./Torpedo").Torpedo;	// Torpedo class
 
 /**************************************************
 ** GAME VARIABLES
 **************************************************/
 var socket,		// Socket controller
 	players;	// Array of connected players
-	//torpedos;	// Array of torpedos
+var torpedos;	// Array of torpedos
 	
 /**************************************************
 ** GAME INITIALISATION
@@ -21,7 +21,7 @@ function init() {
 	players = [];
 	
 	//Create array to store torpedos;
-	//torpedos = [];
+	torpedos = [];
 
 	// Set up Socket.IO to listen on port 8000
 	socket = io.listen(8000);
@@ -62,8 +62,8 @@ function onSocketConnection(client) {
 	client.on("move player", onMovePlayer);
 	
 	// Listen for new torpedo
-	//client.on("new torpedo", onNewTorpedo);
-	//client.on("move torpedo", onMoveTorpedo);
+	client.on("new torpedo", onNewTorpedo);
+	client.on("move torpedo", onMoveTorpedo);
 };
 
 // Socket client has disconnected
@@ -125,7 +125,7 @@ function onMovePlayer(data) {
 	// Broadcast updated position to connected socket clients
 	this.broadcast.emit("move player", {id: movePlayer.id, x: movePlayer.getX(), y: movePlayer.getY(), angle: movePlayer.getAngle()});
 };
-/*
+
 function onNewTorpedo(data) {
 	var newTorpedo = new Torpedo(data.x, data.y, data.angle);
 	newTorpedo.id = this.id;
@@ -149,7 +149,7 @@ function onMoveTorpedo(data) {
 	
 	this.broadcast.emit("move torpedo", {id: moveTorpedo.id, x: moveTorpedo.getX(), y: moveTorpedo.getY(), angle: moveTorpedo.getAngle()});
 }
-*/
+
 /**************************************************
 ** GAME HELPER FUNCTIONS
 **************************************************/
@@ -163,7 +163,7 @@ function playerById(id) {
 	
 	return false;
 };
-/*
+
 function torpedoById(id) {
 	var i;
 	for(i = 0; i < torpedos.length; i++) {
@@ -174,7 +174,7 @@ function torpedoById(id) {
 	
 	return false;
 };
-*/
+
 /**************************************************
 ** RUN THE GAME
 **************************************************/

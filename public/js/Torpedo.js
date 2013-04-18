@@ -53,6 +53,8 @@ var Torpedo = function(startX, startY, startAngle) {
 			x += Math.cos(angle) * speed;
 			y += Math.sin(angle) * speed;
 		}
+		
+		return true;
 	};
 
 	// Draw torpedo

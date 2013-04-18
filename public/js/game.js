@@ -6,13 +6,13 @@ var canvas,			// Canvas DOM element
 	keys,			// Keyboard input
 	localPlayer,	// Local player
 	remotePlayers,	// Remote players
-	//localTorpedos,  // Local torpedos
-	//remoteTorpedos, // Remote torpedos
+	localTorpedos,  // Local torpedos
+	remoteTorpedos, // Remote torpedos
 	socket;			// Socket connection
-/*
+
 var torpedoCooldown = 0.3,
 	torpedoTimer = 0;
-	*/
+	
 
 var pingCooldown = 1;
 var pingTimer = 0;
@@ -52,8 +52,8 @@ function init() {
 	remotePlayers = [];
 
 	//Torpedo arrays
-	//localTorpedos = [];
-	//remoteTorpedos = [];
+	localTorpedos = [];
+	remoteTorpedos = [];
 	
 	// Start listening for events
 	setEventHandlers();
@@ -206,13 +206,13 @@ function update() {
 	localPlayer.update(keys);
 	if (localPlayer.update(keys)) {
 		// Send local player data to the game server
-	socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
+		socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
 	};
 	
-	//torpedoTimer += 0.01;
+	torpedoTimer += 0.01;
 	
 	//Shot button is pressed, fire torpedo
-	/*
+	
 	if(keys.z) {
 		if(torpedoTimer > torpedoCooldown) {
 			var newTorpedo = new Torpedo(localPlayer.getX(), localPlayer.getY(), localPlayer.getAngle() + (Math.random()-0.5)/3);
@@ -221,7 +221,9 @@ function update() {
 			torpedoTimer = 0;
 		}
 	}
-	*/
+	
+	
+	//Update pings
 	pingTimer += 0.01;
 	if(keys.x && pingTimer > pingCooldown) {
 		pings.push({x: localPlayer.getX(), y: localPlayer.getY(), radius: 0});
@@ -240,16 +242,19 @@ function update() {
 			counterpings.splice(i, 1);
 		}
 	}
-	/*
+	
+	//Update torpedoes
 	var i;
 	for(i = 0; i < localTorpedos.length; i += 1) {
-		localTorpedos[i].update();
-		socket.emit("move torpedo", {x: localTorpedos[i].getX(), y: localTorpedos[i].getY(), angle: localTorpedos[i].getAngle()});
+		if(localTorpedos[i].update()) {
+			socket.emit("move torpedo", {x: localTorpedos[i].getX(), y: localTorpedos[i].getY(), angle: localTorpedos[i].getAngle()});
+		}
 	}
 	for(i = 0; i < remoteTorpedos.length; i += 1) {
-		remoteTorpedos[i].update();
+		if(remoteTorpedos[i].update()) {
 		socket.emit("move torpedo", {x: remoteTorpedos[i].getX(), y: remoteTorpedos[i].getY(), angle: remoteTorpedos[i].getAngle()});
-	}*/
+		}
+	}
 };
 
 
@@ -306,32 +311,32 @@ function draw() {
 	};
 	
 	//Draw local torpedos
-	/*
+
 	for (i = 0; i < localTorpedos.length; i++) {
 		//Calculate distance between players
-		var alpha = distToAlpha(localTorpedos[i].getX() - localPlayer.getX(), localTorpedos[i].getY() - localPlayer.getY());
+		var alpha = distToAlpha(localTorpedos[i].getX() - localPlayer.getX(), localTorpedos[i].getY() - localPlayer.getY(), 40);
 
 		//Set color of draw depending on distance from player.
 		//Other torpedos fade out as they grow farther
 		ctx.strokeStyle = "rgba(0,0,0,"+ alpha.toString() +")";
 		
 		//Draw other torpedos
-		//localTorpedos[i].draw(ctx);
+		localTorpedos[i].draw(ctx);
 	};
 	
 	//Draw remote torpedos
 	for (i = 0; i < remoteTorpedos.length; i++) {
 		//Calculate distance between players
-		var alpha = distToAlpha(remoteTorpedos[i].getX() - localPlayer.getX(), remoteTorpedos[i].getY() - localPlayer.getY());
+		var alpha = distToAlpha(remoteTorpedos[i].getX() - localPlayer.getX(), remoteTorpedos[i].getY() - localPlayer.getY(), 40);
 
 		//Set color of draw depending on distance from player.
 		//Other torpedos fade out as they grow farther
 		ctx.strokeStyle = "rgba(0,0,0,"+ alpha.toString() +")";
 		
 		//Draw other torpedos
-		//remoteTorpedos[i].draw(ctx);
+		remoteTorpedos[i].draw(ctx);
 	};
-	*/
+	
 	
 	//Draw pings
 	var i;
@@ -382,7 +387,7 @@ function playerById(id) {
 };
 
 //Torpedo by ID
-/*
+
 function torpedoById(id) {
 	var i;
 	for(i = 0; i < remoteTorpedos.length; i++) {
@@ -392,7 +397,7 @@ function torpedoById(id) {
 	};
 	
 	return false;
-}*/
+}
 
 //Radians to degrees
 function toDegrees(angle) {
