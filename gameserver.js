@@ -3,20 +3,25 @@
 **************************************************/
 var util = require("util"),					// Utility resources (logging, object inspection, etc)
 	io = require("socket.io"),				// Socket.IO
-	Player = require("./Player").Player;	// Player class
+	Player = require("./Player").Player,	// Player class
+	Torpedo = require("./Torpedo").Torpedo;	// Torpedo class
 
 /**************************************************
 ** GAME VARIABLES
 **************************************************/
 var socket,		// Socket controller
-	players;	// Array of connected players
-
+	players,	// Array of connected players
+	torpedos;	// Array of torpedos
+	
 /**************************************************
 ** GAME INITIALISATION
 **************************************************/
 function init() {
 	// Create an empty array to store players
 	players = [];
+	
+	//Create array to store torpedos;
+	torpedos = [];
 
 	// Set up Socket.IO to listen on port 8000
 	socket = io.listen(8000);
@@ -55,6 +60,10 @@ function onSocketConnection(client) {
 
 	// Listen for move player message
 	client.on("move player", onMovePlayer);
+	
+	// Listen for new torpedo
+	client.on("new torpedo", onNewTorpedo);
+	client.on("move torpedo", onMoveTorpedo);
 };
 
 // Socket client has disconnected
@@ -116,6 +125,36 @@ function onMovePlayer(data) {
 	this.broadcast.emit("move player", {id: movePlayer.id, x: movePlayer.getX(), y: movePlayer.getY(), angle: movePlayer.getAngle()});
 };
 
+function onNewTorpedo(data) {
+	var newTorpedo = new Torpedo(data.x, data.y, data.angle);
+	newTorpedo.id = this.id;
+	
+	//On new torpedo received, send this new torpedo to all clients
+	this.broadcast.emit("new torpedo", {id: newTorpedo.id, x: newTorpedo.getX(), y: newTorpedo.getY(), angle: newTorpedo.getAngle()});
+	
+	//Send this new torpedo all already existing torpedos
+	var i, existingTorpedo;
+	for(i = 0; i < torpedos.length; i++) {
+		existingTorpedo = torpedos[i];
+		this.emit("new torpedo", {id: existingTorpedo.id, x: existingTorpedo.getX(), y: existingTorpedo.getY(), angle: existingTorpedo.getAngle()});
+	};
+	
+	torpedos.push(newTorpedo);  //Add the torpedo to the server's torpedo list
+}
+function onMoveTorpedo(data) {
+	var moveTorpedo = torpedoById(this.id);
+	
+	if(!moveTorpedo) {
+		util.log("Torpedo not found: "+this.id);
+		return;
+	};
+	
+	moveTorpedo.setX(data.x);
+	moveTorpedo.setY(data.y);
+	moveTorpedo.setAngle(data.angle);
+	
+	this.broadcast.emit("move torpedo", {id: moveTorpedo.id, x: moveTorpedo.getX(), y: moveTorpedo.getY(), angle: moveTorpedo.getAngle()});
+}
 
 /**************************************************
 ** GAME HELPER FUNCTIONS
@@ -131,6 +170,16 @@ function playerById(id) {
 	return false;
 };
 
+function torpedoById(id) {
+	var i;
+	for(int i = 0; i < torpedos.length; i++) {
+		if(torpedos[i].id == id) {
+			return torpedos[i];
+		}
+	};
+	
+	return false;
+}
 
 /**************************************************
 ** RUN THE GAME

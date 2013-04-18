@@ -6,6 +6,8 @@ var canvas,			// Canvas DOM element
 	keys,			// Keyboard input
 	localPlayer,	// Local player
 	remotePlayers,	// Remote players
+	localTorpedos,  // Local torpedos
+	remoteTorpedos, // Remote torpedos
 	socket;			// Socket connection
 
 
@@ -39,6 +41,10 @@ function init() {
 	// Initialise remote players array
 	remotePlayers = [];
 
+	//Torpedo arrays
+	localTorpedos = [];
+	remoteTorpedos = [];
+	
 	// Start listening for events
 	setEventHandlers();
 };
@@ -69,6 +75,9 @@ var setEventHandlers = function() {
 
 	// Player removed message received
 	socket.on("remove player", onRemovePlayer);
+	
+	socket.on("new torpedo", onNewTorpedo);
+	socket.on("move torpedo", onMoveTorpedo);
 };
 
 // Keyboard key down
@@ -147,7 +156,26 @@ function onRemovePlayer(data) {
 	remotePlayers.splice(remotePlayers.indexOf(removePlayer), 1);
 };
 
+function onNewTorpedo(data) {
+	var newTorpedo = new Torpedo(data.x, data.y, data.angle);
+	newTorpedo.id = data.id;
+	remoteTorpedos.push(newTorpedo);
+};
 
+function onMoveTorpedo(data) {
+	var moveTorpedo = torpedoById(data.id);
+	
+	//If torpedo is not found
+	if(!moveTorpedo) {
+		console.log("Torpedo not found: " + data.id);
+		return;
+	};
+	
+	//update torpedo position
+	moveTorpedo.setX(data.x);
+	moveTorpedo.setY(data.y);
+	moveTorpedo.setAngle(data.angle);
+}
 /**************************************************
 ** GAME ANIMATION LOOP
 **************************************************/
@@ -170,6 +198,18 @@ function update() {
 		// Send local player data to the game server
 	socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
 	//};
+	
+	//Shot button is pressed, fire torpedo
+	if(keys.z) {
+		var newTorpedo = new Torpedo(localPlayer.getX(), localPlayer.getY(), localPlayer.getAngle() + (Math.random()-0.5)/3);
+		localTorpedos.push(newTorpedo);
+	}
+	
+	var i;
+	for(i = 0; i < localTorpedos.length; i += 1) {
+		localTorpedos[i].update();
+		socket.emit("move torpedo", {x: localTorpedos[i].getX(), y: localTorpedos[i].getY(), angle: localTorpedos[i].getAngle()});
+	}
 };
 
 
@@ -190,15 +230,8 @@ function draw() {
 	var i;
 	for (i = 0; i < remotePlayers.length; i++) {
 		//Calculate distance between players
-		var distance = getDistance(remotePlayers[i].getX() - localPlayer.getX(), remotePlayers[i].getY() - localPlayer.getY());
-		if(distance < 0) distance = -distance;
-		var maxAlpha = 1;
-		var minAlpha = 0.05;
-		var maxDist = 40;
-		
-		var alpha = maxDist / distance;
-		if(alpha > maxAlpha) alpha = maxAlpha;
-		if(alpha < minAlpha) alpha = minAlpha;
+		var alpha = distToAlpha(remotePlayers[i].getX() - localPlayer.getX(), remotePlayers[i].getY() - localPlayer.getY());
+
 		//Set color of draw depending on distance from player.
 		//Other playes fade out as they grow farther
 		ctx.strokeStyle = "rgba(0,0,0,"+ alpha.toString() +")";
@@ -206,6 +239,20 @@ function draw() {
 		//Draw other player
 		remotePlayers[i].draw(ctx);
 		drawInfo(ctx, remotePlayers[i]);
+	};
+	
+	//Draw local torpedos
+	for (i = 0; i < localTorpedos.length; i++) {
+		//Calculate distance between players
+		var alpha = distToAlpha(localTorpedos[i].getX() - localPlayer.getX(), localTorpedos[i].getY() - localPlayer.getY());
+
+		//Set color of draw depending on distance from player.
+		//Other torpedos fade out as they grow farther
+		ctx.strokeStyle = "rgba(0,0,0,"+ alpha.toString() +")";
+		
+		//Draw other torpedos
+		localTorpedos[i].draw(ctx);
+		//drawInfo(ctx, localTorpedos[i]);
 	};
 };
 
@@ -229,11 +276,38 @@ function playerById(id) {
 	return false;
 };
 
+//Torpedo by ID
+function torpedoById(id) {
+	var i;
+	for(i = 0; i < torpedos.length; i++) {
+		if(torpedos[i].id == id) {
+			return torpedos[i];
+		}
+	};
+	
+	return false;
+}
+
 //Radians to degrees
 function toDegrees(angle) {
 	var degrees = angle * (180 / Math.PI) % 360;
 	while(degrees < 0) degrees += 360;
 	return degrees;
+}
+
+//Return an alpha value for a given distance
+function distToAlpha(dx, dy) {
+	var distance = getDistance(dx, dy);
+	if(distance < 0) distance = -distance;
+	var maxAlpha = 1;
+	var minAlpha = 0.05;
+	var maxDist = 40;
+	
+	var alpha = maxDist / distance;
+	if(alpha > maxAlpha) alpha = maxAlpha;
+	if(alpha < minAlpha) alpha = minAlpha;
+	
+	return alpha;
 }
 
 //Find approximate distance
