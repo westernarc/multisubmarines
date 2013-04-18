@@ -130,6 +130,7 @@ function onMovePlayer(data) {
 	// Update player position
 	movePlayer.setX(data.x);
 	movePlayer.setY(data.y);
+	movePlayer.setAngle(data.angle);
 };
 
 // Remove player
@@ -167,7 +168,7 @@ function update() {
 	localPlayer.update(keys);
 	//if (localPlayer.update(keys)) {
 		// Send local player data to the game server
-		socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
+	socket.emit("move player", {x: localPlayer.getX(), y: localPlayer.getY(), angle: localPlayer.getAngle()});
 	//};
 };
 
@@ -182,6 +183,8 @@ function draw() {
 	// Draw the local player
 	ctx.strokeStyle = "rgba(0,0,0,1)";
 	localPlayer.draw(ctx);
+	drawInfo(ctx, localPlayer);
+	
 	//drawPlayer(localPlayer);
 	// Draw the remote players
 	var i;
@@ -202,8 +205,16 @@ function draw() {
 		
 		//Draw other player
 		remotePlayers[i].draw(ctx);
+		drawInfo(ctx, remotePlayers[i]);
 	};
 };
+
+//Draw sub info
+function drawInfo(ctx, player) {
+	ctx.strokeText(Math.round(toDegrees(player.getAngle())), player.getX() + 25, player.getY() - 25);
+	ctx.strokeText(Math.round(player.getX()), player.getX() + 25, player.getY() - 15);
+	ctx.strokeText(Math.round(player.getY()), player.getX() + 25, player.getY() - 5);
+}
 
 /**************************************************
 ** GAME HELPER FUNCTIONS
@@ -217,6 +228,13 @@ function playerById(id) {
 	};
 	return false;
 };
+
+//Radians to degrees
+function toDegrees(angle) {
+	var degrees = angle * (180 / Math.PI) % 360;
+	while(degrees < 0) degrees += 360;
+	return degrees;
+}
 
 //Find approximate distance
 //http://www.flipcode.com/archives/Fast_Approximate_Distance_Functions.shtml

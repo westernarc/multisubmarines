@@ -5,13 +5,11 @@ var util = require("util"),					// Utility resources (logging, object inspection
 	io = require("socket.io"),				// Socket.IO
 	Player = require("./Player").Player;	// Player class
 
-
 /**************************************************
 ** GAME VARIABLES
 **************************************************/
 var socket,		// Socket controller
 	players;	// Array of connected players
-
 
 /**************************************************
 ** GAME INITIALISATION
