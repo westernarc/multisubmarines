@@ -5,7 +5,7 @@ var Player = function(startX, startY, startAngle) {
 	var x = startX,
 		y = startY,
 		id,
-		moveAmount = 0.1;
+		moveAmount = 0.01;
 
 	var radius = 25;	//Radius of contact for submarine
 	var armor = 3;		//Armor represents hull integrity
@@ -13,7 +13,7 @@ var Player = function(startX, startY, startAngle) {
 	var subSize = 15;	//Size of the submarine.  Defines radius withing a rectangle
 						//will be circumscribed
 	var speed = 0;
-	var maxSpeed = 2;
+	var maxSpeed = 1;
 	
 	// Getters and setters
 	var getX = function() {
@@ -56,10 +56,10 @@ var Player = function(startX, startY, startAngle) {
 
 		// Left key takes priority over right
 		if (keys.left) {
-			angle -= 0.1;
+			angle -= 0.05;
 			//x -= moveAmount;
 		} else if (keys.right) {
-			angle += 0.1;
+			angle += 0.05;
 			//x += moveAmount;
 		};
 		
